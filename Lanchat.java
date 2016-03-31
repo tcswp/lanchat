@@ -11,7 +11,7 @@ public class Lanchat
         if (args.length == 0)
         {
             username = ChatWindow.usernamePrompt();
-            new Chatroom(username, Status.ONLINE, true);
+            new Chatroom(username, Config.DEFAULT_STATUS, true);
         }
         else
         {
@@ -19,7 +19,7 @@ public class Lanchat
             
             username = args[0];
             
-            Chatroom chat = new Chatroom(username, Status.ONLINE, false);
+            Chatroom chat = new Chatroom(username, Config.DEFAULT_STATUS, false);
     
             String input;
             Scanner scan = new Scanner(System.in);

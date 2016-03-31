@@ -58,60 +58,90 @@ public class Chatroom
 	
 	public void printPeers()
 	{
-        System.out.println("\n"+me.getUsername()+" ("+me.getStatus()+")");
-        if (peers != null)
-        {
-            for (User peer : peers)
-                System.out.println(peer.getUsername()+"@"+peer.getIp().getHostAddress()+" ("+peer.getStatus()+")");
-        }
+    System.out.println("\n"+me.getUsername()+" ("+me.getStatus()+")");
+    if (peers != null)
+    {
+      for (User peer : peers)
+          System.out.println(peer.getUsername()+"@"+peer.getIp().getHostAddress()+" ("+peer.getStatus()+")");
+    }
 	}
 	
 	private static User getPeer(InetAddress ip)
 	{
-        User u = null;
+    User u = null;
 		for (User peer : peers)
 			if (peer.getIp().equals(ip))
 			{
-                u = peer;
-                break;
-            }
+        u = peer;
+        break;
+      }
 		return u;
 	}
 	
 	private static void signOn()
 	{
-        byte[] hello = ("hi "+me.getUsername()+" "+me.getStatus().ordinal()).getBytes();
-        try
-        {
-            DatagramPacket packet = new DatagramPacket(hello, hello.length, broadcastAddr, Config.LISTEN_PORT);
-            socket.send(packet);
-        }
-        catch (Exception e) { e.printStackTrace(); }
+    byte[] hello = ("hi "+me.getUsername()+" "+me.getStatus()).getBytes();
+    try
+    {
+      DatagramPacket packet = new DatagramPacket(hello, hello.length, broadcastAddr, Config.LISTEN_PORT);
+      socket.send(packet);
+    }
+    catch (Exception e) { e.printStackTrace(); }
 	}
 	
 	private static void signOff()
 	{
-        byte [] bye = "bye ".getBytes();
-        try
-        {
-                DatagramPacket packet = new DatagramPacket(bye, bye.length, broadcastAddr, Config.LISTEN_PORT);
-                socket.send(packet);
-        }
-        catch (Exception e) { e.printStackTrace(); }
+    byte [] bye = "bye ".getBytes();
+    try
+    {
+      DatagramPacket packet = new DatagramPacket(bye, bye.length, broadcastAddr, Config.LISTEN_PORT);
+      socket.send(packet);
+    }
+    catch (Exception e) { e.printStackTrace(); }
+  }
+    
+  private static void acknowledge(InetAddress ip)
+  {
+      byte[] hello = ("sup "+me.getUsername()+" "+me.getStatus()).getBytes();
+      try
+      {
+          DatagramPacket packet = new DatagramPacket(hello, hello.length, ip, Config.LISTEN_PORT);
+          socket.send(packet);
+      }
+      catch (Exception e) { e.printStackTrace(); }
+  }
+
+	public void setStatus(Status status)
+	{
+    if (status == me.getStatus())
+      return;
+	
+    Status oldStatus = me.getStatus();
+    me.setStatus(status);
+	
+    if (status == Status.INVISIBLE)
+    {
+      signOff();
+      return;
     }
     
-    private static void acknowledge(InetAddress ip)
+    if (status == Status.ONLINE && oldStatus == Status.INVISIBLE)
     {
-        byte[] hello = ("sup "+me.getUsername()+" "+me.getStatus().ordinal()).getBytes();
-        try
-        {
-            DatagramPacket packet = new DatagramPacket(hello, hello.length, ip, Config.LISTEN_PORT);
-            socket.send(packet);
-        }
-        catch (Exception e) { e.printStackTrace(); }
+      signOn();
+      return;
     }
-
-	public void setStatus(Status status) { me.setStatus(status); }
+    
+    byte[] update = ("update "+status).getBytes();
+    try
+    {
+      for (User peer : peers)
+      {
+        DatagramPacket packet = new DatagramPacket(update, update.length, peer.getIp(), Config.LISTEN_PORT);
+        socket.send(packet);
+      }
+    }
+    catch (Exception e) { e.printStackTrace(); }
+  }
 	
 	public static void sendMessage(String message)
 	{
@@ -158,7 +188,7 @@ public class Chatroom
           if (fields.length > 1)
             body = fields[1];
           String[] dataFields = body.split(" ", 2);
-          
+                    
           String username;
           Status status;
           User peer;
@@ -169,7 +199,7 @@ public class Chatroom
           {
             case "hi":
                     username = dataFields[0];
-                    status = Status.ONLINE;
+                    status = Status.valueOf(dataFields[1].trim());
                     
                     peer = new User(username,status,addr);
                     peers.add(peer);
@@ -187,7 +217,7 @@ public class Chatroom
                     
             case "sup":
                     username = dataFields[0];
-                    status = Status.ONLINE;
+                    status = Status.valueOf(dataFields[1].trim());
                     
                     peer = new User(username,status,addr);
                     peers.add(peer);
@@ -196,7 +226,7 @@ public class Chatroom
                     continue;
                     
             case "update":
-                    status = Status.values()[Integer.parseInt(body)];
+                    status = Status.valueOf(dataFields[0].trim());
                     peer = getPeer(addr);
                     peer.setStatus(status);
                     username = peer.getUsername();

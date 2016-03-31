@@ -2,8 +2,6 @@ package lanchat;
 
 import java.net.InetAddress;
 
-enum Status {ONLINE, INVISIBLE, AWAY}
-
 public class User
 {
 	private String username;
